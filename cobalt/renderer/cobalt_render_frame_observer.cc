@@ -22,10 +22,60 @@
 #include "starboard/extension/graphics.h"
 #include "starboard/system.h"
 #include "third_party/blink/public/web/web_local_frame.h"
+#include "third_party/blink/public/web/web_script_source.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
 
 namespace cobalt {
+
+namespace {
+
+// Applied only to YouTube pages. The icon elements and SVG artwork are left
+// alone so the site's existing iconography remains intact.
+constexpr char kWhateverTubeAppearanceScript[] = R"JS(
+(() => {
+  if (!/(^|\.)youtube(?:-nocookie)?\.com$/i.test(location.hostname)) {
+    return;
+  }
+  if (document.getElementById('whatevertube-appearance')) {
+    return;
+  }
+
+  const font = document.createElement('link');
+  font.id = 'whatevertube-iosevka';
+  font.rel = 'stylesheet';
+  font.href =
+      'https://cdn.jsdelivr.net/fontsource/css/iosevka@5.3.0/latin.min.css';
+  (document.head || document.documentElement).appendChild(font);
+
+  const style = document.createElement('style');
+  style.id = 'whatevertube-appearance';
+  style.textContent = `
+    /* Square off cards, thumbnails, controls, menus and dialogs. */
+    *, *::before, *::after {
+      border-radius: 0 !important;
+    }
+
+    /* Use Iosevka for page text without replacing icon fonts or SVG icons. */
+    html, body,
+    body *:not(svg):not(yt-icon):not(iron-icon):not([class*="icon"]) {
+      font-family: 'Iosevka', monospace !important;
+    }
+
+    input, textarea, select, button {
+      font-family: 'Iosevka', monospace !important;
+      border-radius: 0 !important;
+    }
+
+    img, video, iframe {
+      border-radius: 0 !important;
+    }
+  `;
+  (document.head || document.documentElement).appendChild(style);
+})();
+)JS";
+
+}  // namespace
 
 CobaltRenderFrameObserver::CobaltRenderFrameObserver(
     content::RenderFrame* render_frame)
@@ -39,6 +89,16 @@ CobaltRenderFrameObserver::~CobaltRenderFrameObserver() = default;
 
 void CobaltRenderFrameObserver::OnDestruct() {
   delete this;
+}
+
+void CobaltRenderFrameObserver::DidFinishLoad() {
+  if (!render_frame() || !render_frame()->IsMainFrame() ||
+      !render_frame()->GetWebFrame()) {
+    return;
+  }
+
+  render_frame()->GetWebFrame()->ExecuteScript(blink::WebScriptSource(
+      blink::WebString::FromUTF8(kWhateverTubeAppearanceScript)));
 }
 
 void CobaltRenderFrameObserver::DidMeaningfulLayout(
