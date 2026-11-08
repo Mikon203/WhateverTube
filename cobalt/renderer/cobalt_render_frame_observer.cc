@@ -34,7 +34,7 @@ namespace {
 // alone so the site's existing iconography remains intact.
 constexpr char kWhateverTubeAppearanceScript[] = R"JS(
 (() => {
-  if (!/(^|\\.)youtube(?:-nocookie)?\\.com$/i.test(location.hostname)) {
+  if (!/(^|\.)youtube(?:-nocookie)?\.com$/i.test(location.hostname)) {
     return;
   }
   if (document.getElementById('whatevertube-appearance')) {
